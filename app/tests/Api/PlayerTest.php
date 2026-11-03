@@ -23,11 +23,15 @@ final class PlayerTest extends ApiTestCase
         $schema->createSchema($metadata);
     }
 
-    private function register(string $id, string $name = 'Zorro Astuto 42', string $secret = self::SECRET): array
+    private function register(string $id, string $name = 'Zorro Astuto 42', string $secret = self::SECRET, ?string $avatar = null): array
     {
-        $response = static::createClient()->request('PUT', "/api/players/$id", [
+        $json = ['name' => $name, 'secret' => $secret];
+        if (null !== $avatar) {
+            $json['avatar'] = $avatar;
+        }
+        $response = static::createClient()->request('PUT', "/api/v1/players/$id", [
             'headers' => ['Accept' => 'application/json'],
-            'json' => ['name' => $name, 'secret' => $secret],
+            'json' => $json,
         ]);
 
         return [$response->getStatusCode(), $response->toArray(false)];
@@ -69,7 +73,7 @@ final class PlayerTest extends ApiTestCase
         [$status] = $this->register($id, 'Intruso', str_repeat('x', 40));
 
         $this->assertSame(409, $status);
-        $body = static::createClient()->request('GET', "/api/players/$id", ['headers' => ['Accept' => 'application/json']])->toArray();
+        $body = static::createClient()->request('GET', "/api/v1/players/$id", ['headers' => ['Accept' => 'application/json']])->toArray();
         $this->assertSame('Zorro Astuto 42', $body['name']);
     }
 
@@ -102,12 +106,82 @@ final class PlayerTest extends ApiTestCase
     public function testAnyoneCanReadAPlayerButNotItsSecret(): void
     {
         $id = (string) Uuid::v4();
-        $this->register($id);
+        $this->register($id, avatar: 'zorro:menta');
 
-        $response = static::createClient()->request('GET', "/api/players/$id", ['headers' => ['Accept' => 'application/json']]);
+        $response = static::createClient()->request('GET', "/api/v1/players/$id", ['headers' => ['Accept' => 'application/json']]);
 
         $this->assertSame(200, $response->getStatusCode());
-        $this->assertSame(['id', 'name', 'registeredAt'], array_keys($response->toArray()));
+        $this->assertSame(['id', 'name', 'avatar', 'registeredAt'], array_keys($response->toArray()));
+    }
+
+    private function read(string $id): array
+    {
+        return static::createClient()->request('GET', "/api/v1/players/$id", ['headers' => ['Accept' => 'application/json']])->toArray();
+    }
+
+    public function testThePlayerSendsItsAvatarAndChangesIt(): void
+    {
+        $id = (string) Uuid::v4();
+
+        [, $body] = $this->register($id, avatar: 'buho:lila');
+        $this->assertSame('buho:lila', $body['avatar']);
+
+        [, $body] = $this->register($id, avatar: 'buho:coral:corona');
+        $this->assertSame('buho:coral:corona', $body['avatar']);
+        $this->assertSame('buho:coral:corona', $this->read($id)['avatar']);
+    }
+
+    public function testAnAppWithoutAvatarsLeavesTheOneThereIs(): void
+    {
+        $id = (string) Uuid::v4();
+        $this->register($id, avatar: 'oso:arena');
+
+        $this->register($id, 'Nombre Nuevo');
+
+        $this->assertSame('Nombre Nuevo', $this->read($id)['name']);
+        $this->assertSame('oso:arena', $this->read($id)['avatar']);
+    }
+
+    public function testAPlayerWithoutAvatarHasNone(): void
+    {
+        $id = (string) Uuid::v4();
+        $this->register($id);
+
+        $this->assertArrayNotHasKey('avatar', $this->read($id));
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function badAvatars(): iterable
+    {
+        yield 'animal only' => ['zorro'];
+        yield 'capitals' => ['Zorro:menta'];
+        yield 'accents' => ['búho:menta'];
+        yield 'too many parts' => ['zorro:menta:corona:extra'];
+        yield 'empty part' => ['zorro::corona'];
+        yield 'markup' => ['<b>:menta'];
+        yield 'too long' => [str_repeat('a', 17).':menta'];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('badAvatars')]
+    public function testABadAvatarIsRefused(string $avatar): void
+    {
+        [$status] = $this->register((string) Uuid::v4(), avatar: $avatar);
+
+        $this->assertSame(422, $status);
+    }
+
+    public function testThePatchChangesTheAvatarToo(): void
+    {
+        $id = (string) Uuid::v4();
+        $this->register($id, avatar: 'gato:cielo');
+
+        $status = static::createClient()->request('PATCH', "/api/v1/players/$id", [
+            'headers' => ['Content-Type' => 'application/merge-patch+json', 'Accept' => 'application/json', 'Authorization' => 'Bearer '.self::SECRET],
+            'json' => ['avatar' => 'gato:rosa:lazo'],
+        ])->getStatusCode();
+
+        $this->assertSame(200, $status);
+        $this->assertSame('gato:rosa:lazo', $this->read($id)['avatar']);
     }
 
     private function rename(string $id, string $name, ?string $token): int
@@ -117,7 +191,7 @@ final class PlayerTest extends ApiTestCase
             $headers['Authorization'] = "Bearer $token";
         }
 
-        return static::createClient()->request('PATCH', "/api/players/$id", [
+        return static::createClient()->request('PATCH', "/api/v1/players/$id", [
             'headers' => $headers,
             'json' => ['name' => $name],
         ])->getStatusCode();
@@ -130,7 +204,7 @@ final class PlayerTest extends ApiTestCase
 
         $this->assertSame(200, $this->rename($id, 'Búho Sabio 3', self::SECRET));
 
-        $body = static::createClient()->request('GET', "/api/players/$id", ['headers' => ['Accept' => 'application/json']])->toArray();
+        $body = static::createClient()->request('GET', "/api/v1/players/$id", ['headers' => ['Accept' => 'application/json']])->toArray();
         $this->assertSame('Búho Sabio 3', $body['name']);
     }
 
@@ -170,7 +244,7 @@ final class PlayerTest extends ApiTestCase
 
     public function testThePlayersCanNotBeListed(): void
     {
-        $response = static::createClient()->request('GET', '/api/players');
+        $response = static::createClient()->request('GET', '/api/v1/players');
 
         $this->assertContains($response->getStatusCode(), [404, 405]);
     }

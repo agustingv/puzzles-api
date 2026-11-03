@@ -45,6 +45,13 @@ class Player implements UserInterface
     public const NAME_PATTERN = '/^[\p{L}\p{N}][\p{L}\p{N} _-]*$/u';
     public const NAME_MESSAGE = 'Solo letras, números, espacios, guiones y guiones bajos.';
 
+    /**
+     * The avatar the player put together in the app, as `animal:color` or `animal:color:accessory`.
+     * Only its form is checked: the pieces are the app's, which can add new ones without this API.
+     */
+    public const AVATAR_PATTERN = '/^[a-z]{1,16}:[a-z]{1,16}(:[a-z]{1,16})?$/';
+    public const AVATAR_MESSAGE = 'Un avatar es animal:color o animal:color:accesorio, en minúsculas y sin acentos.';
+
     #[ORM\Id]
     #[ORM\Column(type: 'uuid', unique: true)]
     #[ApiProperty(identifier: true)]
@@ -57,6 +64,11 @@ class Player implements UserInterface
     #[Assert\Length(min: 3, max: 24, normalizer: 'trim')]
     #[Assert\Regex(pattern: self::NAME_PATTERN, message: self::NAME_MESSAGE, normalizer: 'trim')]
     private string $name = '';
+
+    #[ORM\Column(length: 50, nullable: true)]
+    #[Groups(['player:read', 'player:update'])]
+    #[Assert\Regex(pattern: self::AVATAR_PATTERN, message: self::AVATAR_MESSAGE)]
+    private ?string $avatar = null;
 
     /** Only a hash is kept: the secret itself never leaves the player's phone again. */
     #[ORM\Column(length: 64, unique: true)]
@@ -92,6 +104,16 @@ class Player implements UserInterface
     public function setName(string $name): void
     {
         $this->name = trim($name);
+    }
+
+    public function getAvatar(): ?string
+    {
+        return $this->avatar;
+    }
+
+    public function setAvatar(?string $avatar): void
+    {
+        $this->avatar = $avatar;
     }
 
     public function hasSecret(#[\SensitiveParameter] string $secret): bool
