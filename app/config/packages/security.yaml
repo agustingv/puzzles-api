@@ -1,0 +1,19 @@
+security:
+    providers:
+        players:
+            entity:
+                class: App\Entity\Player
+                property: id
+
+    firewalls:
+        dev:
+            pattern: ^/(_profiler(/|$)|(_wdt|assets|build)/)
+            security: false
+        main:
+            stateless: true
+            provider: players
+            access_token:
+                token_handler: App\Security\PlayerTokenHandler
+
+    # Reading a player and registering one are open; changing one needs its token (see Player).
+    access_control: []

@@ -1,0 +1,19 @@
+<?php
+
+namespace App\Dto;
+
+use App\Entity\Player;
+use Symfony\Component\Validator\Constraints as Assert;
+
+/** What the app sends to register a player, at the address of the id it made up: the name and a secret. */
+final class PlayerRegistration
+{
+    #[Assert\NotBlank(normalizer: 'trim')]
+    #[Assert\Length(min: 3, max: 24, normalizer: 'trim')]
+    #[Assert\Regex(pattern: Player::NAME_PATTERN, message: Player::NAME_MESSAGE, normalizer: 'trim')]
+    public string $name = '';
+
+    #[Assert\NotBlank]
+    #[Assert\Length(min: 32, max: 128)]
+    public string $secret = '';
+}

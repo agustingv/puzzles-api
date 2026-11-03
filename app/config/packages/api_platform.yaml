@@ -1,0 +1,12 @@
+api_platform:
+    title: Puzzles API
+    version: 1.0.0
+    formats:
+        jsonld: ['application/ld+json']
+        json: ['application/json']
+    patch_formats:
+        json: ['application/merge-patch+json']
+    defaults:
+        stateless: true
+        cache_headers:
+            vary: ['Content-Type', 'Authorization', 'Origin']
