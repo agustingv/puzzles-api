@@ -1,0 +1,38 @@
+# For a server running Apache with mod_rewrite, with this folder as the document root.
+# Docker uses nginx instead: docker/nginx/default.conf does the same there.
+
+DirectoryIndex index.php
+
+<IfModule mod_negotiation.c>
+    Options -MultiViews
+</IfModule>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Nothing lives at the root yet: a plain 404.
+    RewriteRule ^$ - [R=404,L]
+
+    # The URI base, so that this also works when the API sits in a subfolder.
+    RewriteCond %{REQUEST_URI}::$0 ^(/.+)/(.*)::\2$
+    RewriteRule .* - [E=BASE:%1]
+
+    # Apache drops the Authorization header for PHP: pass it on, for the Bearer token.
+    RewriteCond %{HTTP:Authorization} .+
+    RewriteRule ^ - [E=HTTP_AUTHORIZATION:%0]
+
+    # /index.php/... from outside becomes /..., so that every page has one address.
+    RewriteCond %{ENV:REDIRECT_STATUS} =""
+    RewriteRule ^index\.php(?:/(.*)|$) %{ENV:BASE}/$1 [R=301,L]
+
+    # Real files (the documentation's scripts and styles) as they are; everything else to Symfony.
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^ - [L]
+    RewriteRule ^ %{ENV:BASE}/index.php [L]
+</IfModule>
+
+<IfModule !mod_rewrite.c>
+    # Without mod_rewrite the API cannot work: say so rather than show the folder.
+    ErrorDocument 503 "mod_rewrite is required"
+    RedirectMatch 503 ^
+</IfModule>

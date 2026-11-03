@@ -59,6 +59,8 @@ applies the same rule. Players can not be listed.
 ## Before production
 
 - HTTPS in front of nginx, and the app built with that URL.
+- On Apache instead of nginx: `app/public` as the document root, with `mod_rewrite` and `AllowOverride All`
+  so that `app/public/.htaccess` applies. It does what `docker/nginx/default.conf` does, root 404 included.
 - `APP_ENV=prod`, a real `APP_SECRET`, and database credentials through the environment, not
   `docker-compose.yml`.
 - Rate limiting on `PUT /api/players/{id}`, which anyone can call to create players.
