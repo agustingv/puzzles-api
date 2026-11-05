@@ -10,6 +10,8 @@ use Symfony\Component\Uid\Uuid;
 
 final class RankingTest extends ApiTestCase
 {
+    use ResetsSecretGuesses;
+
     protected static ?bool $alwaysBootKernel = true;
 
     private const SECRET = 'un-secreto-de-prueba-largo-de-al-menos-32-caracteres';
@@ -22,6 +24,7 @@ final class RankingTest extends ApiTestCase
         $metadata = $manager->getMetadataFactory()->getAllMetadata();
         $schema->dropSchema($metadata);
         $schema->createSchema($metadata);
+        $this->resetSecretGuesses();
     }
 
     private function register(string $secret = self::SECRET, string $name = 'Zorro Astuto 42', string $avatar = 'zorro:menta'): string

@@ -53,11 +53,19 @@ They only allow HTTPS.
 | `PUT /api/v1/players/{id}` with `{"name", "avatar", "secret"}` | Registers the player, or updates it if it exists with that secret. Safe to repeat. `409` if the id is someone else's. `avatar` is optional: without it, the player keeps the one it has. | The secret in the body |
 | `GET /api/v1/players/{id}` | The player's id, name, avatar (when it has one) and registration date. | None |
 | `PATCH /api/v1/players/{id}` with `{"name"}` and/or `{"avatar"}` | Changes the player. Not used by the app yet. | `Authorization: Bearer <secret>` |
+| `DELETE /api/v1/players/{id}` | Deletes the player and all its times. `204`; `401` without its secret (or once it is gone, since the secret goes with it), `403` with another player's. | `Authorization: Bearer <secret>` |
 | `PUT /api/v1/scores/{id}` with `{"game", "variant", "seconds", "playedAt"}` | Files a won game in its ranking. Answers `{"id", "game", "variant", "seconds", "rank"}`: `rank` is its place (1 to 10), or `null` if it did not make the ten best, in which case nothing is stored. Safe to repeat: the app makes up the id. `409` if the id is another player's. `playedAt` is optional. | `Authorization: Bearer <secret>` |
 | `GET /api/v1/rankings/{game}/{variant}` | The ten best times on that game and level, of all players: `{"game", "variant", "entries": [{"rank", "id", "seconds", "playedAt", "playerId", "playerName", "playerAvatar"}]}`. Empty if nobody has won it yet. | None |
 
 Names: 3 to 24 letters, digits, spaces, hyphens or underscores, starting with a letter or digit. The app
 applies the same rule. Players can not be listed.
+
+Wrong secrets (a token nobody has, or a registration of a taken id with another secret) are counted per
+IP address: after 20 in 15 minutes, every write from that address (any request with a token, and any
+`PUT`, `PATCH` or `DELETE`) gets `429` with `Retry-After` until the count drops. Reading stays open, and a
+right secret does not clear the count. A secret is 32 random bytes, so this is not what keeps them from
+being guessed: it keeps anyone trying from loading the server. Behind a proxy, Symfony's `trusted_proxies`
+must be set so that the address counted is the client's, not the proxy's.
 
 Rankings work like the app's own records: one per game and level, fastest first, and between equal times
 the one that arrived first. Only the ten best are kept; a time pushed out by a better one is deleted. A player
@@ -84,7 +92,8 @@ use. Adding an optional field or a new endpoint is not breaking and stays in `v1
 - `APP_ENV=prod`, a real `APP_SECRET`, and database credentials through the environment, not
   `docker-compose.yml`.
 - Rate limiting on `PUT /api/v1/players/{id}`, which anyone can call to create players, and on
-  `PUT /api/v1/scores/{id}`.
+  `PUT /api/v1/scores/{id}`. Only wrong secrets are limited for now.
 - The times are the app's word: a player who forges requests can put any time in the rankings. Checking
   them would need the server to see the games themselves.
-- Deleting players on request, as the app's privacy policy promises: for now, by hand in the database.
+- Players delete themselves from the app's settings. One who uninstalled the app first has lost its
+  secret: that request comes by email and is done by hand in the database.

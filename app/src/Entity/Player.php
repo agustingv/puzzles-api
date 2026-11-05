@@ -4,6 +4,7 @@ namespace App\Entity;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Delete;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Put;
@@ -37,6 +38,8 @@ use Symfony\Component\Validator\Constraints as Assert;
             denormalizationContext: ['groups' => ['player:update']],
             security: "is_granted('ROLE_PLAYER') and object == user",
         ),
+        // The player deletes itself, with its times (see Score::$player): only with its own secret.
+        new Delete(security: "is_granted('ROLE_PLAYER') and object == user"),
     ],
     normalizationContext: ['groups' => ['player:read']],
 )]

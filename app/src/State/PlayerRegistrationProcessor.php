@@ -6,7 +6,9 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\Dto\PlayerRegistration;
 use App\Entity\Player;
+use App\Security\SecretGuessLimiter;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Symfony\Component\Uid\Uuid;
 
@@ -19,8 +21,11 @@ use Symfony\Component\Uid\Uuid;
  */
 final class PlayerRegistrationProcessor implements ProcessorInterface
 {
-    public function __construct(private readonly EntityManagerInterface $entityManager)
-    {
+    public function __construct(
+        private readonly EntityManagerInterface $entityManager,
+        private readonly SecretGuessLimiter $secretGuesses,
+        private readonly RequestStack $requests,
+    ) {
     }
 
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): Player
@@ -30,6 +35,8 @@ final class PlayerRegistrationProcessor implements ProcessorInterface
 
         if (null !== $existing) {
             if (!$existing->hasSecret($data->secret)) {
+                // A wrong secret here is a guess as much as a wrong token is.
+                $this->secretGuesses->countWrongSecret($this->requests->getMainRequest());
                 throw new ConflictHttpException('Ese identificador ya pertenece a otro jugador.');
             }
 
