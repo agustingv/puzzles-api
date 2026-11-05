@@ -88,7 +88,9 @@ use. Adding an optional field or a new endpoint is not breaking and stays in `v1
 
 - HTTPS in front of nginx, and the app built with that URL.
 - On Apache instead of nginx: `app/public` as the document root, with `mod_rewrite` and `AllowOverride All`
-  so that `app/public/.htaccess` applies. It does what `docker/nginx/default.conf` does, root 404 included.
+  so that `app/public/.htaccess` applies. It does what `docker/nginx/default.conf` does, root 404 included,
+  and also sends plain HTTP to HTTPS (301) and adds `Strict-Transport-Security`, which the local nginx can not
+  do: it has no HTTPS. `mod_headers` is needed for the latter.
 - `APP_ENV=prod`, a real `APP_SECRET`, and database credentials through the environment, not
   `docker-compose.yml`.
 - Rate limiting on `PUT /api/v1/players/{id}`, which anyone can call to create players, and on

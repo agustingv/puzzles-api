@@ -10,6 +10,12 @@ DirectoryIndex index.php
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
+    # Only HTTPS: a request in plain HTTP goes to the same address over HTTPS. Behind a proxy that ends
+    # the HTTPS itself, Apache sees plain HTTP, so the proxy's X-Forwarded-Proto counts too.
+    RewriteCond %{HTTPS} !=on
+    RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
     # Nothing lives at the root yet: a plain 404.
     RewriteRule ^$ - [R=404,L]
 
@@ -29,6 +35,13 @@ DirectoryIndex index.php
     RewriteCond %{REQUEST_FILENAME} -f
     RewriteRule ^ - [L]
     RewriteRule ^ %{ENV:BASE}/index.php [L]
+</IfModule>
+
+# Browsers that saw the API over HTTPS keep to HTTPS for a year, without trying plain HTTP first.
+<IfModule mod_headers.c>
+    <If "%{HTTPS} == 'on' || %{HTTP:X-Forwarded-Proto} == 'https'">
+        Header always set Strict-Transport-Security "max-age=31536000"
+    </If>
 </IfModule>
 
 <IfModule !mod_rewrite.c>
