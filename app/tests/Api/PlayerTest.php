@@ -133,6 +133,14 @@ final class PlayerTest extends ApiTestCase
         [, $body] = $this->register($id, avatar: 'buho:coral:corona');
         $this->assertSame('buho:coral:corona', $body['avatar']);
         $this->assertSame('buho:coral:corona', $this->read($id)['avatar']);
+
+        // Several accessories at once, the longest the app can make and more.
+        $longest = 'mariposa:melocoton:estrella:chistera:gafas:trofeo';
+        [, $body] = $this->register($id, avatar: $longest);
+        $this->assertSame($longest, $body['avatar']);
+        $most = 'mariposa:melocoton'.str_repeat(':abcdefghijklmnop', 8);
+        [, $body] = $this->register($id, avatar: $most);
+        $this->assertSame($most, $this->read($id)['avatar']);
     }
 
     public function testAnAppWithoutAvatarsLeavesTheOneThereIs(): void
@@ -160,7 +168,7 @@ final class PlayerTest extends ApiTestCase
         yield 'animal only' => ['zorro'];
         yield 'capitals' => ['Zorro:menta'];
         yield 'accents' => ['búho:menta'];
-        yield 'too many parts' => ['zorro:menta:corona:extra'];
+        yield 'too many accessories' => ['zorro:menta'.str_repeat(':corona', 9)];
         yield 'empty part' => ['zorro::corona'];
         yield 'markup' => ['<b>:menta'];
         yield 'too long' => [str_repeat('a', 17).':menta'];

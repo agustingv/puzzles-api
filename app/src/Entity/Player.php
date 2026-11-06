@@ -49,11 +49,12 @@ class Player implements UserInterface
     public const NAME_MESSAGE = 'Solo letras, números, espacios, guiones y guiones bajos.';
 
     /**
-     * The avatar the player put together in the app, as `animal:color` or `animal:color:accessory`.
-     * Only its form is checked: the pieces are the app's, which can add new ones without this API.
+     * The avatar the player put together in the app, as `animal:color` followed by the accessories it
+     * wears, if any: `animal:color:accessory:accessory`. Only its form is checked: the pieces are the
+     * app's, which can add new ones, and new places to wear them, without this API (up to eight).
      */
-    public const AVATAR_PATTERN = '/^[a-z]{1,16}:[a-z]{1,16}(:[a-z]{1,16})?$/';
-    public const AVATAR_MESSAGE = 'Un avatar es animal:color o animal:color:accesorio, en minúsculas y sin acentos.';
+    public const AVATAR_PATTERN = '/^[a-z]{1,16}:[a-z]{1,16}(:[a-z]{1,16}){0,8}$/';
+    public const AVATAR_MESSAGE = 'Un avatar es animal:color y, si los lleva, sus accesorios (animal:color:accesorio:accesorio), en minúsculas y sin acentos.';
 
     #[ORM\Id]
     #[ORM\Column(type: 'uuid', unique: true)]
@@ -68,7 +69,7 @@ class Player implements UserInterface
     #[Assert\Regex(pattern: self::NAME_PATTERN, message: self::NAME_MESSAGE, normalizer: 'trim')]
     private string $name = '';
 
-    #[ORM\Column(length: 50, nullable: true)]
+    #[ORM\Column(length: 200, nullable: true)]
     #[Groups(['player:read', 'player:update'])]
     #[Assert\Regex(pattern: self::AVATAR_PATTERN, message: self::AVATAR_MESSAGE)]
     private ?string $avatar = null;
