@@ -99,3 +99,9 @@ use. Adding an optional field or a new endpoint is not breaking and stays in `v1
   them would need the server to see the games themselves.
 - Players delete themselves from the app's settings. One who uninstalled the app first has lost its
   secret: that request comes by email and is done by hand in the database.
+
+## Privacy policy
+
+`app/public/privacidad.html` is served as is at https://api.puzzles.butaca13.com/privacidad.html, the URL given in
+Google Play. It is a copy of `docs/privacidad.html` in the app's repository: when the policy changes there, copy it
+here and deploy.
