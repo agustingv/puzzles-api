@@ -10,6 +10,10 @@ DirectoryIndex index.php
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
+    # The privacy policy moved to Firebase Hosting with the app's server: the old address, given in Google
+    # Play, goes there. First, so that a plain HTTP request is not redirected twice.
+    RewriteRule ^privacidad\.html$ https://puzzles.butaca13.com/privacidad.html [R=301,L]
+
     # Only HTTPS: a request in plain HTTP goes to the same address over HTTPS. Behind a proxy that ends
     # the HTTPS itself, Apache sees plain HTTP, so the proxy's X-Forwarded-Proto counts too.
     RewriteCond %{HTTPS} !=on

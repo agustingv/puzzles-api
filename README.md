@@ -102,6 +102,7 @@ use. Adding an optional field or a new endpoint is not breaking and stays in `v1
 
 ## Privacy policy
 
-`app/public/privacidad.html` is served as is at https://api.puzzles.butaca13.com/privacidad.html, the URL given in
-Google Play. It is a copy of `docs/privacidad.html` in the app's repository: when the policy changes there, copy it
-here and deploy.
+The privacy policy is on Firebase Hosting, at https://puzzles.butaca13.com/privacidad.html (its source is
+`docs/privacidad.html` in the app's repository, copied to `hosting/` in `~/projects/puzzles-firebase`). The old
+address, https://api.puzzles.butaca13.com/privacidad.html, redirects there with a 301 (`app/public/.htaccess`, and
+`docker/nginx/default.conf` locally), so links to it keep working.
