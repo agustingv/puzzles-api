@@ -32,6 +32,25 @@ register_shutdown_function(static function () use (&$step): void {
 });
 
 $root = dirname(__DIR__);
+$mode = PHP_SAPI === 'cli' ? ($argv[1] ?? '') : ($_GET['modo'] ?? '');
+
+if ($mode === 'runtime') {
+    // As a real request does: the front controller, through Symfony Runtime, for /no-existe.
+    $step = 'index.php (Symfony Runtime) con /no-existe';
+    say('Modo runtime: index.php con /no-existe ...');
+    $_SERVER['REQUEST_URI'] = '/no-existe';
+    $_SERVER['QUERY_STRING'] = '';
+    $_GET = [];
+    $_SERVER['SCRIPT_FILENAME'] = __DIR__.'/index.php';
+    $_SERVER['SCRIPT_NAME'] = $_SERVER['PHP_SELF'] = '/index.php';
+    register_shutdown_function(static function (): void {
+        $page = ob_get_level() > 0 ? ob_get_clean() : '';
+        say('index.php respondió '.http_response_code().' con '.strlen((string) $page).' bytes');
+    });
+    ob_start();
+    require __DIR__.'/../vendor/autoload_runtime.php';
+    exit;
+}
 say('PHP '.PHP_VERSION.' ('.PHP_SAPI.'), memory_limit '.ini_get('memory_limit').', max_execution_time '.ini_get('max_execution_time'));
 $opcache = function_exists('opcache_get_status') ? @opcache_get_status(false) : false;
 say('OPcache: '.($opcache ? 'activo, '.($opcache['opcache_statistics']['num_cached_scripts'] ?? '?').' scripts' : 'NO activo'));
@@ -76,6 +95,23 @@ $t = microtime(true);
 $kernel = new App\Kernel('prod', false);
 $kernel->boot();
 say(sprintf('Symfony arranca en %.2f s', microtime(true) - $t));
+
+if ($mode === 'global') {
+    // This very request, with its headers, host and address, as Symfony would get it, but to /no-existe.
+    $step = 'petición real a Symfony';
+    $_SERVER['REQUEST_URI'] = '/no-existe';
+    $_SERVER['QUERY_STRING'] = '';
+    $request = Symfony\Component\HttpFoundation\Request::createFromGlobals();
+    $request->query->remove('t');
+    say('Petición real: host '.$request->getHost().', https '.($request->isSecure() ? 'sí' : 'no').', '.count($request->headers->all()).' cabeceras');
+    $t = microtime(true);
+    $response = $kernel->handle($request);
+    say(sprintf('handle: %d en %.2f s', $response->getStatusCode(), microtime(true) - $t));
+    $step = 'terminate de la petición real';
+    $t = microtime(true);
+    $kernel->terminate($request, $response);
+    say(sprintf('terminate: %.2f s', microtime(true) - $t));
+}
 
 $step = 'una petición a Symfony';
 $t = microtime(true);
